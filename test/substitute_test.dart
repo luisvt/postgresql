@@ -2,14 +2,16 @@ library postgresql_test;
 
 import 'dart:async';
 import 'dart:io';
+import 'package:ddbc/ddbc.dart';
 import 'package:unittest/unittest.dart';
 import 'package:postgresql/postgresql.dart';
 import 'package:yaml/yaml.dart';
+import 'connection_settings.dart';
 
-Settings loadSettings(){
-  var map = loadYaml(new File('test/test_config.yaml').readAsStringSync());
-  return new Settings.fromMap(map);
-}
+//Settings loadSettings(){
+//  var map = loadYaml(new File('test_config.yaml').readAsStringSync());
+//  return new Settings.fromMap(map);
+//}
 
 main() {
 
@@ -97,16 +99,15 @@ main() {
 
   group('Query', () {
 
-    Connection conn;
-
-    setUp(() => connect(loadSettings().toUri()).then((c) => conn = c));
+    Connection conn = new PgConnection(USER_NAME, PASSWORD, DB_NAME);
 
     tearDown(() {
       if (conn != null) conn.close();
     });
 
-    test('Substitution', () {
-      conn.query(
+    solo_test('Substitution', () {
+      conn.connect().then(expectAsync1((conn) {
+        conn.execute(
           'select @num, @num:string, @num:number, '
           '@int, @int:string, @int:number, '
           '@string, '
@@ -119,10 +120,10 @@ main() {
             'boolean' : true,
             'boolean_false' : false,
             'boolean_null' : null,
-          }).toList()
-            .then(expectAsync1((rows) {}));
+          })
+            .then(expectAsync1((result) { }));
+      }));
     });
-
   });
 
 }

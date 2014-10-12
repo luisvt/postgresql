@@ -90,7 +90,7 @@ class Settings {
   
   String get host => _host;
   int get port => _port;
-  String get user => _user;
+  String get userName => _user;
   String get password => _password;
   String get database => _database;
   bool get requireSsl => _requireSsl;
@@ -111,7 +111,7 @@ class Settings {
     var map = new Map<String, dynamic>();
     map[HOST] = host;
     map[PORT] = port;
-    map[USER] = user;
+    map[USER] = userName;
     map[PASSWORD] = password;
     map[DATABASE] = database;
     if (requireSsl)

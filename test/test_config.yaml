@@ -1,5 +1,5 @@
 host: localhost
 port: 5432
-user: testdb
-password: password
+user: postgres
+password: fyhlavt
 database: testdb

@@ -4,56 +4,45 @@ import 'dart:async';
 import 'dart:io';
 import 'package:unittest/unittest.dart';
 import 'package:postgresql/postgresql.dart';
-import 'package:postgresql/postgresql_pool.dart';
-import 'package:yaml/yaml.dart';
+import 'connection_settings.dart';
 
-Settings loadSettings(){
-  var map = loadYaml(new File('test/test_config.yaml').readAsStringSync()); 
-  return new Settings.fromMap(map);
-}
 
 main() {
   
-  Pool pool;
-  int tout = 2 * 60 * 1000; // Should be longer than usage
+  PgConnectionPool pool = new PgConnectionPool(USER_NAME, PASSWORD, DB_NAME);
+  int tout = 2 * 1000; // Should be longer than usage
   
-  setUp(() => pool = new Pool(loadSettings().toUri(), timeout: tout, min: 2, max: 5));
   
   test('Connect', () {
   	var pass = expectAsync0(() {});
 
     testConnect(_) {
-    	pool.connect().then((conn) {
-        print(pool);
-    		conn.query("select 'oi';").toList()
-    			.then(print)
-    			.then((_) => conn.close())
-          .catchError((err) => print('Query error: $err'));
-    	})
+    	pool.execute("select 'oi';")
+    			.then((_) => 
+              print('fast query done.'))
       .catchError((err) => print('Connect error: $err'));
     }
 
     slowQuery() {
-     pool.connect().then((conn) {
-        print(pool);
-        conn.query("select generate_series (1, 1000);").toList()
-          .then((_) => print('slow query done.'))
-          .then((_) => conn.close())
+     pool.execute("select generate_series (1, 10000);")
+          .then((_) => 
+              print('slow query done.'))
+//          .then((_) => conn.close())
           .catchError((err) => print('Query error: $err'));
-      })
-      .catchError((err) => print('Connect error: $err')); 
+//      .catchError((err) => print('Connect error: $err')); 
     }
 
     // Wait for initial connections to be made before starting
-    var timer;
+    Timer timer;
     pool.start().then((_) {
       for (var i = 0; i < 10; i++)
         slowQuery();
+//        testConnect();
 
-      timer = new Timer.periodic(new Duration(milliseconds: 1), testConnect);
+      timer = new Timer.periodic(new Duration(milliseconds: 100), testConnect);
     });
 
-    new Future.delayed(new Duration(seconds: 2), () {
+    new Future.delayed(new Duration(seconds: 1), () {
       timer.cancel();
       pool.destroy();
       print('Pool destroyed.');

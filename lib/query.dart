@@ -1,17 +1,10 @@
 part of postgresql;
 
 class _Query {
-  int __state = _QUEUED;
-  
-  int get _state => __state;
-  set _state(int s) {
-    var was = __state;
-    __state = s;
-    //print('Query state change: ${_queryStateToString(was)} => ${_queryStateToString(s)}.');
-  }
+  _QueryState state = _QueryState.QUEUED;
   
   final String sql;
-  final StreamController<_Row> _controller = new StreamController<_Row>();
+  final StreamController<Result> _controller = new StreamController<Result>();
   int _commandIndex = 0;
   int _rowIndex = -1;
   int _columnCount;
@@ -27,8 +20,8 @@ class _Query {
   Stream<dynamic> get stream => _controller.stream;
   
   void addRowDescription() {
-    if (_state == _QUEUED)
-      _state = _STREAMING;
+    if (state == _QueryState.QUEUED)
+      state = _QueryState.STREAMING;
     
     _columnNames = _columns.map((c) => c.name).toList();
     
@@ -54,7 +47,7 @@ class _Query {
   
   void close() {
     _controller.close();
-    _state = _DONE;
+    state = _QueryState.DONE;
   }
 }
 
@@ -91,12 +84,12 @@ class _Row implements Row {
   
   operator[] (int i) => _columnValues[i];
   
-  void forEach(void f(String columnName, columnValue)) {
-    assert(_columnValues.length == _columnNames.length);
-    for (int i = 0; i < _columnValues.length; i++) {
-      f(_columnNames[i], _columnValues[i]);
-    }
-  }
+//  void forEach(void f(String columnName, columnValue)) {
+//    assert(_columnValues.length == _columnNames.length);
+//    for (int i = 0; i < _columnValues.length; i++) {
+//      f(_columnNames[i], _columnValues[i]);
+//    }
+//  }
   
   noSuchMethod(Invocation invocation) {
     var name = invocation.memberName;
@@ -108,7 +101,11 @@ class _Row implements Row {
     super.noSuchMethod(invocation);
   }
   
-  String toString() => _columnValues.toString();
+  String toString() => {
+    'columnNames': _columnNames,
+    'columnValues': _columnValues,
+    'columnIndex': _index
+  }.toString();
 }
 
 

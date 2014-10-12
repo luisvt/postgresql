@@ -1,14 +1,14 @@
 part of postgresql;
 
-class _PgClientException implements PgClientException, PgException, Exception {
+class _PgClientException extends SqlClientException with Exception {
   final String _msg;
   final dynamic error;
   _PgClientException(this._msg, [this.error]);
   String toString() => error == null ? _msg : '$_msg ($error)';
 }
 
-class _PgServerException implements PgServerException, PgException, Exception {
-  final PgServerInformation _info;
+class _PgServerException implements SqlServerException, SqlException, Exception {
+  final SqlServerInformation _info;
   _PgServerException(this._info);
   
   bool get isError => _info.isError;
@@ -25,7 +25,7 @@ class _PgServerException implements PgServerException, PgException, Exception {
   }
 }
 
-class _PgServerInformation implements PgServerInformation {
+class _PgServerInformation implements SqlServerInformation {
   
   _PgServerInformation(this.isError, Map<String,String> map)
       : code = map['C'] == null ? '' : map['C'],    //FIXME use map.get(key, default), when implemented. See dart issue #2643.

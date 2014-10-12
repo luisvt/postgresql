@@ -1,29 +1,29 @@
 part of postgresql;
 
-const int _NOT_CONNECTED = 1;
-const int _SOCKET_CONNECTED = 2;
-const int _AUTHENTICATING = 3;
-const int _AUTHENTICATED = 4;
-const int _IDLE = 5;
-const int _BUSY = 6;
-const int _STREAMING = 7; // state is called "ready" in libpq. Doesn't make sense in a non-blocking impl. 
-const int _CLOSED = 8;
-
-String _stateToString(int s) {
-  if (s < 0 || s > 8)
-    return '?';
-  return ['?', 'NOT_CONNECTED', 'SOCKET_CONNECTED', 'AUTHENTICATING', 'AUTHENTICATED', 'IDLE', 'BUSY', 'STREAMING', 'CLOSED'][s];
+class _State extends Enum {
+  static const NOT_CONNECTED = const _State(1);
+  static const SOCKET_CONNECTED = const _State(2);
+  static const AUTHENTICATING = const _State(3);
+  static const AUTHENTICATED = const _State(4);
+  static const IDLE = const _State(5);
+  static const BUSY = const _State(6);
+  static const STREAMING = const _State(7); // state is called "ready" in libpq. Doesn't make sense in a non-blocking impl. 
+  static const CLOSED = const _State(8);
+  
+  final int val;
+  const _State(this.val);
+  
 }
 
-const int _QUEUED = 1;
-//const int _BUSY = 6;
-//const int _STREAMING = 7;
-const int _DONE = 8;
-
-String _queryStateToString(int s) {
-  if (s < 0 || s > 8)
-    return '?';
-  return ['?', 'QUEUED', '?', '?', '?', '?', 'BUSY', 'STREAMING', 'DONE'][s];
+class _QueryState extends Enum {
+  static const QUEUED = const _QueryState._(1);
+  static const BUSY = const _QueryState._(6);
+  static const STREAMING = const _QueryState._(7);
+  static const DONE = const _QueryState._(8);
+  
+  final int val;
+  
+  const _QueryState._(this.val);
 }
 
 const int _I = 73;

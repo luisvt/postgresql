@@ -1,27 +1,29 @@
 part of postgresql;
 
-class _Connection implements Connection {
+class PgConnection extends Connection {
 
-  _Connection(this._socket, Settings settings)
-    : _userName = settings.user,
-      _passwordHash = _md5s(settings.password + settings.user),
-      _databaseName = settings.database;
+//  PgConnection(this._socket, Settings settings)
+//    : _userName = settings.user,
+//      _passwordHash = _md5s(settings.password + settings.user),
+//      _databaseName = settings.database;
 
-  int __state = _NOT_CONNECTED;
-  int get _state => __state;
-  set _state(int s) {
-    var was = __state;
-    __state = s;
-    //print('Connection state change: ${_stateToString(was)} => ${_stateToString(s)}.');
-  }
+  _State state = _State.NOT_CONNECTED;
+  
+  Transaction _transactionStatus = Transaction.TRANSACTION_UNKNOWN;
 
-  int _transactionStatus = TRANSACTION_UNKNOWN;
-  int get transactionStatus => _transactionStatus;
+  PgConnection(String userName, String password, String dbName,
+   {
+     String host: '127.0.0.1',
+     int port: 5432,
+     int maxPacketSize: 16 * 1024 * 1024,
+//      bool useCompression: false,
+     bool useSSL: false,
+     int timeout
+   }) : super(userName, _md5s(password + userName), dbName, host: host, port: port, maxPacketSize: maxPacketSize, useSSL: useSSL, timeout: timeout);
+  
+  Transaction get transactionStatus => _transactionStatus;
 
-  final String _databaseName;
-  final String _userName;
-  final String _passwordHash;
-  final Socket _socket;
+  Socket _socket;
   final _Buffer _buffer = new _Buffer();
   bool _hasConnected = false;
   final Completer _connected = new Completer();
@@ -34,20 +36,19 @@ class _Connection implements Connection {
   Stream get unhandled => _unhandled.stream;
   final StreamController _unhandled = new StreamController();
 
-  static Future<_Connection> _connect(String uri) {
+  Future<PgConnection> connect() {
     return new Future.sync(() {
-      var settings = new Settings.fromUri(uri);
 
-      var future = settings.requireSsl
-        ? _connectSsl(settings)
-        : Socket.connect(settings.host, settings.port);
+      Future<Socket> future = useSSL
+        ? _connectSsl()
+        : Socket.connect(host, port);
 
       return future.then((socket) {
-        var conn = new _Connection(socket, settings);
-        socket.listen(conn._readData, onError: conn._handleSocketError, onDone: conn._handleSocketClosed);
-        conn._state = _SOCKET_CONNECTED;
-        conn._sendStartupMessage();
-        return conn._connected.future;
+        _socket = socket;
+        _socket.listen(_readData, onError: _handleSocketError, onDone: _handleSocketClosed);
+        state = _State.SOCKET_CONNECTED;
+        _sendStartupMessage();
+        return _connected.future;
       });
     });
   }
@@ -58,11 +59,11 @@ class _Connection implements Connection {
     return CryptoUtils.bytesToHex(hash.close());
   }
 
-  static Future<SecureSocket> _connectSsl(Settings settings) {
+  Future<SecureSocket> _connectSsl() {
 
     var completer = new Completer<SecureSocket>();
 
-    Socket.connect(settings.host, settings.port).then((socket) {
+    Socket.connect(host, port).then((socket) {
 
       socket.listen((data) {
         if (data == null || data[0] != _S) {
@@ -88,35 +89,35 @@ class _Connection implements Connection {
   }
 
   void _sendStartupMessage() {
-    if (_state != _SOCKET_CONNECTED)
+    if (state != _State.SOCKET_CONNECTED)
       throw new StateError('Invalid state during startup.');
 
     var msg = new _MessageBuffer();
     msg.addInt32(0); // Length padding.
     msg.addInt32(_PROTOCOL_VERSION);
     msg.addString('user');
-    msg.addString(_userName);
+    msg.addString(userName);
     msg.addString('database');
-    msg.addString(_databaseName);
+    msg.addString(dbName);
     //TODO write params list.
     msg.addByte(0);
     msg.setLength(startup: true);
 
     _socket.add(msg.buffer);
 
-    _state = _AUTHENTICATING;
+    state = _State.AUTHENTICATING;
   }
 
   void _readAuthenticationRequest(int msgType, int length) {
     assert(_buffer.bytesAvailable >= length);
 
-    if (_state != _AUTHENTICATING)
+    if (state != _State.AUTHENTICATING)
       throw new StateError('Invalid connection state while authenticating.');
 
     int authType = _buffer.readInt32();
 
     if (authType == _AUTH_TYPE_OK) {
-      _state = _AUTHENTICATED;
+      state = _State.AUTHENTICATED;
       return;
     }
 
@@ -127,7 +128,7 @@ class _Connection implements Connection {
 
     var bytes = _buffer.readBytes(4);
     var salt = new String.fromCharCodes(bytes);
-    var md5 = 'md5' + _md5s('${_passwordHash}$salt');
+    var md5 = 'md5' + _md5s('${password}$salt');
 
     // Build message.
     var msg = new _MessageBuffer();
@@ -153,22 +154,22 @@ class _Connection implements Connection {
     if (c == _I || c == _T || c == _E) {
 
       if (c == _I)
-        _transactionStatus = TRANSACTION_NONE;
+        _transactionStatus = Transaction.TRANSACTION_NONE;
       else if (c == _T)
-        _transactionStatus = TRANSACTION_BEGUN;
+        _transactionStatus = Transaction.TRANSACTION_BEGUN;
       else if (c == _E)
-        _transactionStatus = TRANSACTION_ERROR;
+        _transactionStatus = Transaction.TRANSACTION_ERROR;
 
-      var was = _state;
+      var was = state;
 
-      _state = _IDLE;
+      state = _State.IDLE;
 
       if (_query != null) {
         _query.close();
         _query = null;
       }
 
-      if (was == _AUTHENTICATED) {
+      if (was == _State.AUTHENTICATED) {
         _hasConnected = true;
         _connected.complete(this);
       }
@@ -184,7 +185,7 @@ class _Connection implements Connection {
 
   void _handleSocketError(error) {
 
-    if (_state == _CLOSED) {
+    if (state == _State.CLOSED) {
       //FIXME logging
       print('Error after socket closed: $error');
       _destroy();
@@ -205,7 +206,7 @@ class _Connection implements Connection {
   }
 
   void _handleSocketClosed() {
-    if (_state != _CLOSED) {
+    if (state != _State.CLOSED) {
       _handleSocketError(new _PgClientException('Socket closed.'));
     }
   }
@@ -214,7 +215,7 @@ class _Connection implements Connection {
 
     try {
 
-      if (_state == _CLOSED)
+      if (state == _State.CLOSED)
         return;
 
       _buffer.append(data);
@@ -231,7 +232,7 @@ class _Connection implements Connection {
       }
 
       // Main message loop.
-      while (_state != _CLOSED) {
+      while (state != _State.CLOSED) {
 
         if (_buffer.bytesAvailable < 5)
           return; // Wait for more data.
@@ -265,7 +266,7 @@ class _Connection implements Connection {
 
   bool _checkMessageLength(int msgType, int msgLength) {
 
-    if (_state == _AUTHENTICATING) {
+    if (state == _State.AUTHENTICATING) {
       if (msgLength < 8) return false;
       if (msgType == _MSG_AUTH_REQUEST && msgLength > 2000) return false;
       if (msgType == _MSG_ERROR_RESPONSE && msgLength > 30000) return false;
@@ -336,7 +337,7 @@ class _Connection implements Connection {
     if (msgType == _MSG_ERROR_RESPONSE) {
       var ex = new _PgServerException(info);
       if (!_hasConnected) {
-          _state = _CLOSED;
+          state = _State.CLOSED;
           _socket.destroy();
           _connected.completeError(ex);
       } else if (_query != null) {
@@ -364,35 +365,48 @@ class _Connection implements Connection {
         new Future.error(err));
   }
 
-  Stream query(String sql, [values]) {
+  Future<Result> query(String sql, [values]) {
     try {
       if (values != null)
         sql = _substitute(sql, values);
       var query = _enqueueQuery(sql);
-      return query.stream;
-    } on Exception catch (ex) {
-      return new Stream.fromFuture(new Future.error(ex));
-    }
-  }
-
-  Future<int> execute(String sql, [values]) {
-    try {
-      if (values != null)
-        sql = _substitute(sql, values);
-      var query = _enqueueQuery(sql);
-      return query.stream.isEmpty.then((_) => query._rowsAffected);
+      return query.stream.toList().then((results) {
+        print(results);
+      });
     } on Exception catch (ex) {
       return new Future.error(ex);
     }
   }
 
-  Future runInTransaction(Future operation(), [Isolation isolation = READ_COMMITTED]) {
+  Future<Result> execute(String sql, [parameters, bool transactional = false, bool consistent = true]) {
+    try {
+      if (parameters != null)
+        sql = _substitute(sql, parameters);
+      var query = _enqueueQuery(sql);
+      return query.stream.toList().then((rows) {
+        return new Result()
+          ..rows = rows
+          ..affectedRows = query._rowsAffected;
+//          ..insertedId = query.
+      });
+          
+//      return query.stream.isEmpty.then((_) => query._rowsAffected);
+    } on Exception catch (ex) {
+      return new Future.error(ex);
+    }
+  }
 
-    var begin = 'begin';
-    if (isolation == REPEATABLE_READ)
-      begin = 'begin; set transaction isolation level repeatable read;';
-    else if (isolation == SERIALIZABLE)
-      begin = 'begin; set transaction isolation level serializable;';
+  Future runInTransaction(Future operation(), [Isolation isolation = Isolation.READ_COMMITTED]) {
+
+    var begin = 'begin;';
+    switch(isolation) {
+      case Isolation.REPEATABLE_READ:
+        begin += ' set transaction isolation level repeatable read;';
+        break;
+      case Isolation.SERIALIZABLE:
+        begin += ' set transaction isolation level serializable;';
+        
+    }
 
     return execute(begin)
       .then((_) => operation())
@@ -408,7 +422,7 @@ class _Connection implements Connection {
     if (sql == null || sql == '')
       throw new _PgClientException('SQL query is null or empty.');
 
-    if (_state == _CLOSED)
+    if (state == _State.CLOSED)
       throw new _PgClientException('Connection is closed, cannot execute query.');
 
     var query = new _Query(sql);
@@ -428,10 +442,11 @@ class _Connection implements Connection {
     if (_query != null)
       return;
 
-    if (_state == _CLOSED)
+    if (state == _State.CLOSED)
       return;
 
-    assert(_state == _IDLE);
+//    print(state);
+    assert(state == _State.IDLE);
 
     _query = _sendQueryQueue.removeFirst();
 
@@ -443,22 +458,27 @@ class _Connection implements Connection {
 
     _socket.add(msg.buffer);
 
-    _state = _BUSY;
-    _query._state = _BUSY;
-    _transactionStatus = TRANSACTION_UNKNOWN;
+    state = _State.BUSY;
+    _query.state = _QueryState.BUSY;
+    _transactionStatus = Transaction.TRANSACTION_UNKNOWN;
   }
 
   void _readRowDescription(int msgType, int length) {
 
     assert(_buffer.bytesAvailable >= length);
 
-    _state = _STREAMING;
+    state = _State.STREAMING;
 
     int count = _buffer.readInt16();
     var list = new List<_Column>(count);
 
     for (int i = 0; i < count; i++) {
       var name = _buffer.readString(length); //FIXME better maxSize.
+      switch(name) {
+        case '?column?':
+        case 'bool':
+          name = 'column$i';
+      }
       int fieldId = _buffer.readInt32();
       int tableColNo = _buffer.readInt16();
       int fieldType = _buffer.readInt32();
@@ -562,11 +582,11 @@ class _Connection implements Connection {
   }
 
   void close() {
-    if (_state == _CLOSED)
+    if (state == _State.CLOSED)
       return;
 
-    var prior = _state;
-    _state = _CLOSED;
+    var prior = state;
+    state = _State.CLOSED;
 
     try {
       var msg = new _MessageBuffer();
@@ -579,16 +599,21 @@ class _Connection implements Connection {
       _unhandled.add(new _PgClientException('Postgresql connection closed without sending terminate message.', e));
     }
 
-    if (prior != _CLOSED)
+    if (prior != _State.CLOSED)
       _closed.complete(null);
 
     _destroy();
   }
 
   void _destroy() {
-    _state = _CLOSED;
+    state = _State.CLOSED;
     _socket.destroy();
   }
 
   Future get onClosed => _closed.future;
+
+  @override
+  Future<List<Result>> executeMulti(String sql, [values]) {
+    // TODO: implement executeMulti
+  }
 }

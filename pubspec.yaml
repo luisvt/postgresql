@@ -4,9 +4,12 @@ author: Greg Lowe <greg@vis.net.nz>
 description: Postgresql database driver.
 homepage: https://github.com/xxgreg/postgresql
 environment:
-  sdk: ">=0.8.10+6 <2.0.0"
+  sdk: '>=0.8.10+6 <2.0.0'
 dependencies:
-  crypto: ">=0.9.0 <0.10.0"
+  crypto: '>=0.9.0 <0.10.0'
+  ddbc:
+    path: ../ddbc
+  enums: any
 dev_dependencies:
-  unittest: ">=0.9.0 <0.10.0"
-  yaml: ">=0.9.0 <0.10.0"
+  unittest: '>=0.9.0 <0.10.0'
+  yaml: '>=0.9.0 <0.10.0'
