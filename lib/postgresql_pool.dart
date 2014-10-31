@@ -11,7 +11,6 @@ class PgConnectionPool extends ConnectionPool {
 	int get _count => _connections.length + _connecting;
 	int _connecting = 0;
 
-//	PgConnectionPool(this._uri, {this.timeout, this.min: 2, this.max: 10});
 	PgConnectionPool(
       String userName,
       String password,

@@ -4,7 +4,7 @@ class _Query {
   _QueryState state = _QueryState.QUEUED;
   
   final String sql;
-  final StreamController<Result> _controller = new StreamController<Result>();
+  final StreamController<Row> _controller = new StreamController<Row>();
   int _commandIndex = 0;
   int _rowIndex = -1;
   int _columnCount;
@@ -35,7 +35,7 @@ class _Query {
   }
   
   void addRow() {
-    var row = new _Row(_columnNames, _rowData, _columnIndex);
+    var row = new _Row(_rowData, _columnIndex);
     _rowData = null;
     _controller.add(row);    
   }
@@ -72,40 +72,50 @@ class _Column {
   String toString() => 'Column: index: $index, name: $name, fieldId: $fieldId, tableColNo: $tableColNo, fieldType: $fieldType, dataSize: $dataSize, typeModifier: $typeModifier, formatCode: $formatCode.';
 }
 
-class _Row implements Row {
-  _Row(this._columnNames, this._columnValues, this._index) {
-    assert(this._columnNames.length == this._columnValues.length);
+
+class _Row extends Row {
+
+  _Row(this.columnValues, this.index) {
+    assert(this._columnNames.length == this.columnValues.length);
   }
   
   // Map column name to column index
-  final Map<Symbol, int> _index;
-  final List<String> _columnNames;
-  final List _columnValues;
+  final Map<Symbol, int> index;
+  final List columnValues;
   
-  operator[] (int i) => _columnValues[i];
-  
-//  void forEach(void f(String columnName, columnValue)) {
-//    assert(_columnValues.length == _columnNames.length);
-//    for (int i = 0; i < _columnValues.length; i++) {
-//      f(_columnNames[i], _columnValues[i]);
-//    }
-//  }
+  operator[] (Object i) {
+    if(i is String) {
+      var idx = _columnNames.indexOf(i);
+      return idx == -1 ? null : columnValues[idx];
+    } else if(i is int) {
+      return columnValues[i];
+    }
+    return null;
+  }
   
   noSuchMethod(Invocation invocation) {
     var name = invocation.memberName;
     if (invocation.isGetter) {
       var i = _index[name];
       if (i != null)
-        return _columnValues[i];
+        return columnValues[i];
     }
     super.noSuchMethod(invocation);
   }
   
   String toString() => {
-    'columnNames': _columnNames,
-    'columnValues': _columnValues,
-    'columnIndex': _index
+    'columnValues': columnValues,
+    'columnIndex': index
   }.toString();
+  
+  ///Convert the row into a map
+  Map toMap() {
+    var rowMap = {};
+    for(var i = 0; i < _columnNames.length ; i++) {
+      rowMap[_columnNames[i]] = columnValues[i];
+    }
+    return rowMap;
+  }
 }
 
 

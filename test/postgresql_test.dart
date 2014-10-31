@@ -61,7 +61,7 @@ main() {
       });
     });
 
-    test('Execute on closed connection.', () {
+    solo_test('Execute on closed connection.', () {
       var cb = expectAsync1((e) {});
       connect().then((conn) {
         conn.close();

@@ -8,7 +8,7 @@ environment:
 dependencies:
   crypto: '>=0.9.0 <0.10.0'
   ddbc:
-    path: ../ddbc
+    path: ''
   enums: any
 dev_dependencies:
   unittest: '>=0.9.0 <0.10.0'

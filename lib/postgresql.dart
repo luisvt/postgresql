@@ -40,5 +40,5 @@ class Isolation extends Enum {
 }
 
 /// Made public for testing.
-String substitute(String source, values) => _substitute(source, values);
-String formatValue(value, String type) => _formatValue(value, type);
+//String substitute(String source, values) => _substitute(source, values);
+//String formatValue(value, String type) => _formatValue(value, type);

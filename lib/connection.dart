@@ -368,7 +368,7 @@ class PgConnection extends Connection {
   Future<Result> query(String sql, [values]) {
     try {
       if (values != null)
-        sql = _substitute(sql, values);
+        sql = new PgSqlFormatter().substitute(sql, values);
       var query = _enqueueQuery(sql);
       return query.stream.toList().then((results) {
         print(results);
@@ -379,21 +379,19 @@ class PgConnection extends Connection {
   }
 
   Future<Result> execute(String sql, [parameters, bool transactional = false, bool consistent = true]) {
-    try {
-      if (parameters != null)
-        sql = _substitute(sql, parameters);
-      var query = _enqueueQuery(sql);
-      return query.stream.toList().then((rows) {
-        return new Result()
-          ..rows = rows
-          ..affectedRows = query._rowsAffected;
-//          ..insertedId = query.
+      return connect().then((conn) {
+        if (parameters != null)
+          sql = new PgSqlFormatter().substitute(sql, parameters);
+        var query = conn._enqueueQuery(sql);
+        return query.stream.toList().then((rows) {
+          conn.close();
+          return new Result()
+            ..rows = rows
+            ..affectedRows = query._rowsAffected
+            ..columns = query._columnNames;
+  //          ..insertedId = query.
+        });
       });
-          
-//      return query.stream.isEmpty.then((_) => query._rowsAffected);
-    } on Exception catch (ex) {
-      return new Future.error(ex);
-    }
   }
 
   Future runInTransaction(Future operation(), [Isolation isolation = Isolation.READ_COMMITTED]) {
