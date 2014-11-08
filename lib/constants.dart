@@ -1,17 +1,21 @@
 part of postgresql;
 
 class _State extends Enum {
-  static const NOT_CONNECTED = const _State(1);
-  static const SOCKET_CONNECTED = const _State(2);
-  static const AUTHENTICATING = const _State(3);
-  static const AUTHENTICATED = const _State(4);
-  static const IDLE = const _State(5);
-  static const BUSY = const _State(6);
-  static const STREAMING = const _State(7); // state is called "ready" in libpq. Doesn't make sense in a non-blocking impl. 
-  static const CLOSED = const _State(8);
+  static const NOT_CONNECTED = const _State._(1);
+  static const SOCKET_CONNECTED = const _State._(2);
+  static const AUTHENTICATING = const _State._(3);
+  static const AUTHENTICATED = const _State._(4);
+  static const IDLE = const _State._(5);
+  static const BUSY = const _State._(6);
+  static const STREAMING = const _State._(7); // state is called "ready" in libpq. Doesn't make sense in a non-blocking impl. 
+  static const CLOSED = const _State._(8);
+  
+  static _State valueOf(String name) => Enum.valueOf(_State, name);
+  static List<_State> get values => Enum.values(_State);
+
   
   final int val;
-  const _State(this.val);
+  const _State._(this.val);
   
 }
 

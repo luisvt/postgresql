@@ -76,7 +76,7 @@ class _Column {
 class _Row extends Row {
 
   _Row(this.columnValues, this.index) {
-    assert(this._columnNames.length == this.columnValues.length);
+//    assert(this._columnNames.length == this.columnValues.length);
   }
   
   // Map column name to column index
@@ -84,13 +84,13 @@ class _Row extends Row {
   final List columnValues;
   
   operator[] (Object i) {
-    if(i is String) {
-      var idx = _columnNames.indexOf(i);
-      return idx == -1 ? null : columnValues[idx];
-    } else if(i is int) {
+//    if(i is String) {
+//      var idx = _columnNames.indexOf(i);
+//      return idx == -1 ? null : columnValues[idx];
+//    } else if(i is int) {
       return columnValues[i];
-    }
-    return null;
+//    }
+//    return null;
   }
   
   noSuchMethod(Invocation invocation) {
@@ -109,13 +109,13 @@ class _Row extends Row {
   }.toString();
   
   ///Convert the row into a map
-  Map toMap() {
-    var rowMap = {};
-    for(var i = 0; i < _columnNames.length ; i++) {
-      rowMap[_columnNames[i]] = columnValues[i];
-    }
-    return rowMap;
-  }
+//  Map toMap() {
+//    var rowMap = {};
+//    for(var i = 0; i < _columnNames.length ; i++) {
+//      rowMap[_columnNames[i]] = columnValues[i];
+//    }
+//    return rowMap;
+//  }
 }
 
 

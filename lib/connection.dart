@@ -26,7 +26,7 @@ class PgConnection extends Connection {
   Socket _socket;
   final _Buffer _buffer = new _Buffer();
   bool _hasConnected = false;
-  final Completer _connected = new Completer();
+  Completer _connected = new Completer();
   final Completer _closed = new Completer();
   final Queue<_Query> _sendQueryQueue = new Queue<_Query>();
   _Query _query;
@@ -37,6 +37,10 @@ class PgConnection extends Connection {
   final StreamController _unhandled = new StreamController();
 
   Future<PgConnection> connect() {
+//    if(state == _State.CLOSED)
+//      return null;
+    
+    _connected = new Completer();
     return new Future.sync(() {
 
       Future<Socket> future = useSSL
@@ -379,19 +383,21 @@ class PgConnection extends Connection {
   }
 
   Future<Result> execute(String sql, [parameters, bool transactional = false, bool consistent = true]) {
-      return connect().then((conn) {
-        if (parameters != null)
-          sql = new PgSqlFormatter().substitute(sql, parameters);
-        var query = conn._enqueueQuery(sql);
-        return query.stream.toList().then((rows) {
-          conn.close();
-          return new Result()
-            ..rows = rows
-            ..affectedRows = query._rowsAffected
-            ..columns = query._columnNames;
-  //          ..insertedId = query.
-        });
-      });
+    try {
+          if (parameters != null)
+            sql = new PgSqlFormatter().substitute(sql, parameters);
+          var query = _enqueueQuery(sql);
+          return query.stream.toList().then((rows) {
+            return new Result()
+              ..rows = rows
+              ..affectedRows = query._rowsAffected;
+//          ..insertedId = query.
+          });
+              
+//      return query.stream.isEmpty.then((_) => query._rowsAffected);
+        } on Exception catch (ex) {
+          return new Future.error(ex);
+        }
   }
 
   Future runInTransaction(Future operation(), [Isolation isolation = Isolation.READ_COMMITTED]) {

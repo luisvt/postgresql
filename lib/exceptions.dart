@@ -1,6 +1,6 @@
 part of postgresql;
 
-class _PgClientException extends SqlClientException with Exception {
+class _PgClientException extends SqlClientException {
   _PgClientException(String msg, [error]) : super(msg, error);
 
   String toString() => error == null ? msg : '$msg ($error)';

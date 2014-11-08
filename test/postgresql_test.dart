@@ -52,16 +52,19 @@ main() {
     });
 
     test('Query on closed connection.', () {
-      var cb = expectAsync1((e) {});
+      var cb = expectAsync1((Exception e) {
+        print(e);
+      });
       connect().then((conn) {
         conn.close();
         conn.execute("select 'blah'")
-          .then((_) => throw new Exception('Should not be reached.'))
+          .then((_) =>
+              throw new Exception('Should not be reached.'))
           .catchError(cb);
       });
     });
 
-    solo_test('Execute on closed connection.', () {
+    test('Execute on closed connection.', () {
       var cb = expectAsync1((e) {});
       connect().then((conn) {
         conn.close();
@@ -73,9 +76,9 @@ main() {
 
   });
 
-  group('Query', () {
+  group('Query >', () {
 
-    Connection conn;
+    PgConnection conn;
 
     setUp(() {
       return connect().then((c) => conn = c);
@@ -88,19 +91,21 @@ main() {
     test('Invalid sql statement', () {
       conn.execute('elect 1').then(
           (result) => throw new Exception('Should not be reached.'),
-          onError: expectAsync1((err) { /* boom! */ }));
+          onError: expectAsync1((err) { print(err); }));
     });
 
     test('Null sql statement', () {
       conn.execute(null).then(
           (result) => throw new Exception('Should not be reached.'),
-          onError: expectAsync1((err) { /* boom! */ }));
+          onError: expectAsync1((err) { 
+            print(err); 
+            }));
     });
 
     test('Empty sql statement', () {
       conn.execute('').then(
           (result) => throw new Exception('Should not be reached.'),
-          onError: expectAsync1((err) { /* boom! */ }));
+          onError: expectAsync1((err) { print(err); }));
     });
 
     test('Whitespace only sql statement', () {
