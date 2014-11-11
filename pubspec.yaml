@@ -8,7 +8,7 @@ environment:
 dependencies:
   crypto: '>=0.9.0 <0.10.0'
   ddbc: 0.0.1
-  enums: any
+  enums: '>=0.2.1 <0.3.0'
 dev_dependencies:
   unittest: '>=0.11.0 <0.12.0'
   yaml: '>=0.9.0 <0.10.0'
