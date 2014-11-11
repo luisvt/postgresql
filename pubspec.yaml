@@ -7,9 +7,8 @@ environment:
   sdk: '>=0.8.10+6 <2.0.0'
 dependencies:
   crypto: '>=0.9.0 <0.10.0'
-  ddbc:
-    path: ''
+  ddbc: 0.0.1
   enums: any
 dev_dependencies:
-  unittest: '>=0.9.0 <0.10.0'
+  unittest: '>=0.11.0 <0.12.0'
   yaml: '>=0.9.0 <0.10.0'
