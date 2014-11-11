@@ -383,22 +383,33 @@ class PgConnection extends Connection {
   }
 
   Future<Result> execute(String sql, [parameters, bool transactional = false, bool consistent = true]) {
-    try {
-          if (parameters != null)
-            sql = new PgSqlFormatter().substitute(sql, parameters);
-          var query = _enqueueQuery(sql);
-          return query.stream.toList().then((rows) {
-            return new Result()
-              ..rows = rows
-              ..affectedRows = query._rowsAffected;
-//          ..insertedId = query.
-          });
-              
-//      return query.stream.isEmpty.then((_) => query._rowsAffected);
-        } on Exception catch (ex) {
-          return new Future.error(ex);
-        }
+    if(state == _State.NOT_CONNECTED) {
+      return connect().then((conn) {
+        return _execute(sql, parameters, transactional, consistent);
+      });
+    }
+    return _execute(sql, parameters, transactional, consistent);
   }
+  
+  Future<Result> _execute(String sql, [parameters, bool transactional = false, bool consistent = true]) {
+//    return connect().then((conn) {
+        try {
+            if (parameters != null)
+              sql = new PgSqlFormatter().substitute(sql, parameters);
+            var query = _enqueueQuery(sql);
+            return query.stream.toList().then((rows) {
+              return new Result()
+                ..rows = rows
+                ..affectedRows = query._rowsAffected;
+//          ..insertedId = query.
+            });
+                
+//      return query.stream.isEmpty.then((_) => query._rowsAffected);
+          } on Exception catch (ex) {
+            return new Future.error(ex);
+          }
+//    });
+    }
 
   Future runInTransaction(Future operation(), [Isolation isolation = Isolation.READ_COMMITTED]) {
 
