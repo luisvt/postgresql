@@ -44,7 +44,7 @@ main() {
             'boolean_false' : false,
             'boolean_null' : null,
           })
-            .then(expectAsync1((Result result) { 
+            .then(expectAsync((Result result) { 
         print(result.rows);
         
       }));

@@ -14,7 +14,7 @@ main() {
   
   
   test('Connect', () {
-  	var pass = expectAsync0(() {});
+  	var pass = expectAsync(() {});
 
     testConnect(_) {
     	pool.execute("select 'oi';")
