@@ -16,7 +16,6 @@ part 'format_value.dart';
 part 'message_buffer.dart';
 part 'query.dart';
 part 'settings.dart';
-part 'substitute.dart';
 part 'postgresql_pool.dart';
 
 class Transaction extends Enum {
