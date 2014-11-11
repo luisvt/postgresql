@@ -37,9 +37,6 @@ class PgConnection extends Connection {
   final StreamController _unhandled = new StreamController();
 
   Future<PgConnection> connect() {
-//    if(state == _State.CLOSED)
-//      return null;
-    
     _connected = new Completer();
     return new Future.sync(() {
 
@@ -392,7 +389,6 @@ class PgConnection extends Connection {
   }
   
   Future<Result> _execute(String sql, [parameters, bool transactional = false, bool consistent = true]) {
-//    return connect().then((conn) {
         try {
             if (parameters != null)
               sql = new PgSqlFormatter().substitute(sql, parameters);
@@ -404,11 +400,9 @@ class PgConnection extends Connection {
 //          ..insertedId = query.
             });
                 
-//      return query.stream.isEmpty.then((_) => query._rowsAffected);
           } on Exception catch (ex) {
             return new Future.error(ex);
           }
-//    });
     }
 
   Future runInTransaction(Future operation(), [Isolation isolation = Isolation.READ_COMMITTED]) {
